@@ -1,0 +1,15 @@
+---
+# Dieses Playbook beinhaltet gebräuchliche Tasks.
+
+- name: Firewall auf allen Hosts aktivieren
+  service: name=firewalld state=started enabled=yes
+    
+- name: Firewall-Port für SSH aktivieren
+  firewalld: port=22/tcp permanent=true state=enabled immediate=yes
+    
+- name: Passwort-Authentifikation einschalten
+  lineinfile: dest=/etc/ssh/sshd_config
+              regexp="^PasswordAuthentication"
+              line="PasswordAuthentication yes"
+              state=present
+  notify: restart ssh

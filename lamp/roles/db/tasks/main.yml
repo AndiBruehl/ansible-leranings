@@ -1,0 +1,74 @@
+---
+# Dieses Playbook führt die MySQL-Installation aus
+
+- name: Import MySQL GPG key
+  command: rpm --import https://dev.mysql.com/doc/refman/5.7/en/RPM-GPG-KEY-mysql
+  args:
+    warn: no
+    
+- name: Install MySQL community common
+  yum:
+    name: mysql-community-common-5.7.44-1.el7.x86_64
+    state: latest    
+
+- name: Installiere das MySQL Software Repository
+  yum:
+    name: http://repo.mysql.com/mysql57-community-release-el7-10.noarch.rpm
+    state: present
+    disable_gpg_check: false
+
+- name: Installiere die MySQL Datenbank
+  yum: name=mysql-server state=present
+
+- name: Installiere MySQL-python
+  shell: sudo python3 -m pip install mysql-connector
+
+- name: Installiere Python3 PyMySQL
+  shell: sudo python3 -m pip install PyMySQL
+
+- name: Installiere Python3 Cryptography
+  shell: sudo python3 -m pip install cryptography
+
+- name: Stelle sicher, dass pymysql vorhanden ist
+  pip:
+    name: pymysql
+    state: present
+
+- name: Starte den MySQL Server beim booten
+  service: name=mysqld state=started enabled=yes
+
+- shell: grep 'temporary password' /var/log/mysqld.log | awk '{print $NF}';
+  register: result
+- set_fact:
+    mysql_root_pw: "{{ result.stdout }}"
+
+- stat: path=/root/.my.cnf
+  register: sym
+
+- set_fact: mysql_root_pw="{{ masterpassword }}"
+  when: sym.stat.exists == True
+
+- name: Installiere .my.cnf mit Credentials
+  template: src=my.cnf.j2 dest=/root/.my.cnf
+            mode=0400
+  tags: my_cnf
+
+- name: Setze das root-Passwort für die MySQL Datenbank
+  command: mysql -u root --connect-expired-password --execute="SET PASSWORD = '{{ masterpassword }}';"
+
+- set_fact:
+    mysql_root_pw: "{{ masterpassword }}"
+
+- name: Installiere .my.cnf mit Credentials
+  template: src=my.cnf.j2 dest=/root/.my.cnf
+            mode=0400
+  tags: my_cnf
+
+- name: Erzeuge die Datenbank für die Website
+  mysql_db: name={{ dbname }} state=present
+
+- name: Erzeuge den Datenbanknutzer für die Anwendung
+  mysql_user: name={{ dbuser }} password={{ upassword }} priv='*.*:ALL' host='%' state=present
+
+- name: Aktiviere den Firewall-Port für MySQL
+  firewalld: port={{ mysql_port }}/tcp permanent=true state=enabled immediate=yes

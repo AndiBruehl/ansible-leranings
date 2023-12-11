@@ -1,0 +1,9 @@
+---
+# Datenbank Systemvariablen
+mysqlservice: mysqld
+mysql_port: 3306
+dbuser: webapp
+dbname: DATA02
+upassword: user@008
+masterpassword: MySQL@008
+

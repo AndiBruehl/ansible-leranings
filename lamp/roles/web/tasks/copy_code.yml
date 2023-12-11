@@ -1,0 +1,10 @@
+---
+# Diese Tasks sind dafür verantwortlich, den letzten Produktionscode
+# aus dem Versionsmanagementsystem zu kopieren
+
+
+- name: Kopiere die Datei index.php
+  template: src=index.php.j2 dest=/var/www/html/index.php
+  
+- name: Lösche index.html falls vorhanden
+  file: path=/var/www/html/index.html state=absent

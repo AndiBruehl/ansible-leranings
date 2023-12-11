@@ -1,0 +1,53 @@
+---
+# Dieses Playbook führt die MySQL-Installation aus
+- name: Installiere das MySQL Software Repository
+  get_url:
+    url: http://repo.mysql.com/mysql57-community-release-el7-10.noarch.rpm
+    dest: /etc/yum.repos.d/mysql57-community.repo
+    mode: 0644
+- name: Installiere die MySQL Datenbank
+  yum: name=mysql-server state=present
+  register: mysql_installed
+- name: Installiere MySQL-python
+  shell: sudo pip install mysql-connector-python
+- name: Installiere Python3 PyMySQL
+  shell: sudo python3 -m pip install PyMySQL
+- name: Installiere Python3 Cryptography
+  command: pip3 install cryptography
+
+- name: Stelle sicher, dass pymysql vorhanden ist
+  pip:
+    name: pymysql
+- name: Starte den MySQL Server beim booten
+  service: name=mysqld state=started enabled=yes
+  when: mysql_installed.changed
+- shell: grep 'temporary password' /var/log/mysqld.log | awk '{print $NF}';
+  register: result
+- set_fact:
+    mysql_root_pw: "{{ result.stdout }}"
+
+- name: Installiere .my.cnf mit Credentials
+  template: src=my.cnf.j2 dest=/root/.my.cnf
+   mode=0400
+  tags: my_cnf
+
+- name: Setze das root-Passwort für die MySQL Datenbank
+  command: mysql -u root --connect-expired-password --execute="SET PASSWORD = '{{masterpassword }}';"
+  register: set_password_result
+
+- set_fact:
+    mysql_root_pw: "{{ masterpassword }}"
+
+- name: Installiere .my.cnf mit Credentials
+  template: src=my.cnf.j2 dest=/root/.my.cnf mode=0400
+  tags: my_cnf
+
+- name: Erzeuge die Datenbank für die Website
+  mysql_db: name={{ dbname }} state=present
+
+- name: Erzeuge den Datenbanknutzer für die Anwendung
+  mysql_user: name={{ dbuser }} password={{ upassword }} priv='*.*:ALL' host='%'
+   state=present
+
+- name: Aktiviere den Firewall-Port für MySQL
+  firewalld: port={{ mysql_port }}/tcp permanent=true state=enabled immediate=yes

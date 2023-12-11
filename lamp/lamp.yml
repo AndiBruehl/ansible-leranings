@@ -1,0 +1,22 @@
+---
+#ansible-playbook lamp.yml --syntax-check
+#ansible-playbook lamp.yml -i hosts.ini
+
+- name: Anwendung der Config-Dateien auf alle Server
+  hosts: all
+  become: yes
+  roles:
+   - common
+   
+- name: Ausrollen von MySQL
+  hosts: dbservers
+  become: yes 
+  roles:
+   - db
+   
+- name: deploy Apache, PHP
+  hosts: webservers
+  become: yes 
+  roles:
+   - web
+

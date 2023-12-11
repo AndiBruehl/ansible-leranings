@@ -1,0 +1,25 @@
+---
+# Playbook für Web Server
+
+- name: Installiere httpd und php
+  yum: name={{ item }} state=present
+  with_items:
+   - httpd
+   - php
+   - php-mysqlnd
+
+- name: Installiere die spezifischen Abhängigkeiten der Role web
+  yum: name={{ item }} state=installed
+  with_items:
+   - git
+
+- name: Starte Apache Server beim booten
+  service: name=httpd state=started enabled=yes
+
+- name: Öffne den Firewall-Port für Apache
+  firewalld: port=80/tcp permanent=true state=enabled immediate=yes
+
+- name: Aktiviere die Netzwerkverbindung
+  shell: setsebool -P httpd_can_network_connect_db 1
+
+- include_tasks: copy_code.yml
